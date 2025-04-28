@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <title>Albumok</title>
+  <style>
+    body {
+      background-color: #e5f1fb;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #217346;
+      text-align: center;
+    }
+
+    #albumok-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+      margin-top: 30px;
+    }
+
+    .album-card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      width: 30%;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+      animation: fadeIn 0.5s ease forwards;
+    }
+
+    .album-card:hover {
+      transform: scale(1.03);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+    }
+
+    button {
+      margin-right: 5px;
+      margin-top: 5px;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      color: white;
+      background-color: #217346;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: #1b5e36;
+    }
+
+    #hozzaad-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    #hozzaad-form input {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    #hozzaad-form button {
+      background-color: #2a5699;
+    }
+
+    #hozzaad-form button:hover {
+      background-color: #244b87;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <h1>🎵 Albumok</h1>
+
+  <form id="hozzaad-form">
+    <input type="text" id="band" placeholder="Zenekar" required>
+    <input type="text" id="title" placeholder="Album címe" required>
+    <input type="number" id="year" placeholder="Év" min="1900" max="2025" required>
+    <input type="text" id="genre" placeholder="Műfaj" required>
+    <button type="submit">Hozzáadás</button>
+  </form>
+
+  <div id="albumok-container"></div>
+
+  <script>
+    const apiUrl = 'http://localhost:3000/albums';
+    const albumokContainer = document.getElementById('albumok-container');
+    const hozzaadForm = document.getElementById('hozzaad-form');
+
+    async function betoltAlbumok() {
+      const res = await fetch(apiUrl);
+      const albumok = await res.json();
+
+      albumokContainer.innerHTML = '';
+
+      albumok.forEach(album => {
+        const kartya = document.createElement('div');
+        kartya.className = 'album-card';
+        kartya.innerHTML = `
+          <h3>${album.band}</h3>
+          <p><strong>${album.title}</strong></p>
+          <p>Év: ${album.year}</p>
+          <p>Műfaj: ${album.genre}</p>
+          <button onclick="modositAlbum(${album.id}, '${album.band}', '${album.title}', ${album.year}, '${album.genre}')">Módosít</button>
+          <button onclick="torolAlbum(${album.id})" style="background-color: #c41c00;">Törlés</button>
+        `;
+        albumokContainer.appendChild(kartya);
+      });
+    }
+
+    hozzaadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const ujAlbum = {
+        band: document.getElementById('band').value,
+        title: document.getElementById('title').value,
+        year: parseInt(document.getElementById('year').value),
+        genre: document.getElementById('genre').value
+      };
+
+      await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ujAlbum)
+      });
+
+      hozzaadForm.reset();
+      betoltAlbumok();
+    });
+
+    async function torolAlbum(id) {
+      if (!confirm('Biztosan törlöd ezt az albumot?')) return;
+
+      await fetch(`${apiUrl}/${id}`, { method: 'DELETE' });
+      betoltAlbumok();
+    }
+
+    async function modositAlbum(id, band, title, year, genre) {
+      const ujBand = prompt('Zenekar neve:', band);
+      if (ujBand === null) return;
+
+      const ujTitle = prompt('Album címe:', title);
+      if (ujTitle === null) return;
+
+      const ujYear = prompt('Megjelenés éve:', year);
+      if (ujYear === null) return;
+
+      const ujGenre = prompt('Műfaj:', genre);
+      if (ujGenre === null) return;
+
+      await fetch(`${apiUrl}/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ band: ujBand, title: ujTitle, year: parseInt(ujYear), genre: ujGenre })
+      });
+
+      betoltAlbumok();
+    }
+
+    window.onload = betoltAlbumok;
+  </script>
+</body>
+</html>
