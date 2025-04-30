@@ -35,7 +35,7 @@
 
     .album-card:hover {
       transform: scale(1.03);
-      box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+      box-shadow: 10px 20px 30px rgba(0,0,0,0.4);
     }
 
     button {
@@ -69,6 +69,10 @@
       border-radius: 5px;
     }
 
+    #hozzaad-form input:hover{
+      border: 1px black solid;
+    }
+
     #hozzaad-form button {
       background-color: #2a5699;
     }
@@ -84,7 +88,7 @@
   </style>
 </head>
 <body>
-  <h1>🎵 Albumok</h1>
+  <h1>Albumok</h1>
 
   <form id="hozzaad-form">
     <input type="text" id="band" placeholder="Zenekar" required>
@@ -93,6 +97,13 @@
     <input type="text" id="genre" placeholder="Műfaj" required>
     <button type="submit">Hozzáadás</button>
   </form>
+
+  <div style="text-align: center; margin-top: 20px;">
+    <input type="number" id="keresett-id" placeholder="Keresett ID" min="1" style="padding: 8px; border-radius: 5px; border: 1px solid #ccc;">
+    <button onclick="keresAlbum()" style="background-color: #2a5699;">Keresés</button>
+    <button onclick="visszaAllapot()" style="background-color: #888;">Vissza</button>
+  </div>
+
 
   <div id="albumok-container"></div>
 
@@ -111,6 +122,7 @@
         const kartya = document.createElement('div');
         kartya.className = 'album-card';
         kartya.innerHTML = `
+          <p>ID: ${album.id}</p>
           <h3>${album.band}</h3>
           <p><strong>${album.title}</strong></p>
           <p>Év: ${album.year}</p>
@@ -123,24 +135,35 @@
     }
 
     hozzaadForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
+  e.preventDefault();
 
-      const ujAlbum = {
-        band: document.getElementById('band').value,
-        title: document.getElementById('title').value,
-        year: parseInt(document.getElementById('year').value),
-        genre: document.getElementById('genre').value
-      };
+  const ujAlbum = {
+    band: document.getElementById('band').value,
+    title: document.getElementById('title').value,
+    year: parseInt(document.getElementById('year').value),
+    genre: document.getElementById('genre').value
+  };
 
-      await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(ujAlbum)
-      });
-
-      hozzaadForm.reset();
-      betoltAlbumok();
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ujAlbum)
     });
+
+    if (!response.ok) {
+      const errorMsg = await response.text();
+      alert(errorMsg);  
+      return;
+    }
+
+    hozzaadForm.reset();
+    betoltAlbumok();
+  } catch (err) {
+    alert('Hiba történt: ' + err.message);
+  }
+});
+
 
     async function torolAlbum(id) {
       if (!confirm('Biztosan törlöd ezt az albumot?')) return;
@@ -170,6 +193,45 @@
 
       betoltAlbumok();
     }
+
+    async function keresAlbum() {
+  const id = parseInt(document.getElementById('keresett-id').value);
+  if (!id) {
+    alert('Adj meg egy érvényes ID-t!');
+    return;
+  }
+
+  const res = await fetch(`${apiUrl}/${id}`);
+  if (!res.ok) {
+    alert('Nincs ilyen album!');
+    return;
+  }
+
+  const album = await res.json();
+  albumokContainer.innerHTML = ''; // ürít
+  albumokContainer.appendChild(kartyaLetrehoz(album));
+}
+
+function visszaAllapot() {
+  document.getElementById('keresett-id').value = '';
+  betoltAlbumok();
+}
+
+function kartyaLetrehoz(album) {
+  const kartya = document.createElement('div');
+  kartya.className = 'album-card';
+  kartya.innerHTML = `
+    <p><strong>ID: ${album.id}</strong></p>
+    <h3>${album.band}</h3>
+    <p><strong>${album.title}</strong></p>
+    <p>Év: ${album.year}</p>
+    <p>Műfaj: ${album.genre}</p>
+    <button onclick="modositAlbum(${album.id}, '${album.band}', '${album.title}', ${album.year}, '${album.genre}')">Módosít</button>
+    <button onclick="torolAlbum(${album.id})" style="background-color: #c41c00;">Törlés</button>
+  `;
+  return kartya;
+}
+
 
     window.onload = betoltAlbumok;
   </script>
